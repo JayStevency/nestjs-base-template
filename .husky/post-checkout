@@ -1,4 +1,4 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-npm run s3:env:dev:download && npm run s3:env:prod:download
+# npm run s3:env:dev:download && npm run s3:env:prod:download
