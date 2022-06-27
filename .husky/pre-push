@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+npm run s3:env:dev:upload && npm run s3:env:prod:upload
