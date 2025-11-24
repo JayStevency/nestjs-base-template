@@ -1,0 +1,17 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": "..",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@app/core(|/.*)$": "<rootDir>/../../libs/core/src/$1",
+    "^@app/shared(|/.*)$": "<rootDir>/../../libs/shared/src/$1",
+    "^@app/rabbitmq(|/.*)$": "<rootDir>/../../libs/rabbitmq/src/$1",
+    "^@app/prisma(|/.*)$": "<rootDir>/../../libs/prisma/src/$1",
+    "^@app/telemetry(|/.*)$": "<rootDir>/../../libs/telemetry/src/$1"
+  },
+  "testTimeout": 30000
+}
