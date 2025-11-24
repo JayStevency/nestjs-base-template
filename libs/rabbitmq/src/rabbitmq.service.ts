@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { RmqContext, RmqOptions, Transport } from '@nestjs/microservices';
+import { ConfigProps } from '@app/core';
 
 @Injectable()
 export class RabbitmqService {
+  constructor(private readonly configService: ConfigService<ConfigProps>) {}
+
   getOptions(queue: string, noAck = false): RmqOptions {
+    const rabbitMqUrl = this.configService.get('rabbitMqUrl');
     return {
       transport: Transport.RMQ,
       options: {
-        urls: [process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672'],
+        urls: [rabbitMqUrl],
         queue,
         noAck,
         queueOptions: {

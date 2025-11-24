@@ -1,6 +1,8 @@
 import { DynamicModule, Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { RabbitmqService } from './rabbitmq.service';
+import { ConfigProps } from '@app/core';
 
 export interface RmqModuleOptions {
   name: string;
@@ -19,16 +21,21 @@ export class RabbitmqModule {
         ClientsModule.registerAsync([
           {
             name: options.name,
-            useFactory: () => ({
-              transport: Transport.RMQ,
-              options: {
-                urls: [process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672'],
-                queue: options.queue,
-                queueOptions: {
-                  durable: true,
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService<ConfigProps>) => {
+              const rabbitMqUrl = configService.get('rabbitMqUrl');
+              return {
+                transport: Transport.RMQ,
+                options: {
+                  urls: [rabbitMqUrl] as string[],
+                  queue: options.queue,
+                  queueOptions: {
+                    durable: true,
+                  },
                 },
-              },
-            }),
+              };
+            },
           },
         ]),
       ],
