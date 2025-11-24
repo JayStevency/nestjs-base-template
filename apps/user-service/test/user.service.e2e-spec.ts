@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
 import { UserService } from '../src/user.service';
 import { PrismaService } from '@app/prisma';
+import configurations from '@app/core/config/configurations';
 
 describe('UserService (e2e)', () => {
   let service: UserService;
@@ -10,6 +12,12 @@ describe('UserService (e2e)', () => {
 
   beforeAll(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({
+          isGlobal: true,
+          load: [configurations],
+        }),
+      ],
       providers: [UserService, PrismaService],
     }).compile();
 
