@@ -31,5 +31,10 @@ export default (): ConfigProps => {
       password: data.DB_PASSWORD || 'postgres',
       name: data.DB_NAME || 'nestjs',
     },
+    telemetry: {
+      enabled: data.OTEL_ENABLED === 'true',
+      endpoint:
+        data.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces',
+    },
   };
 };

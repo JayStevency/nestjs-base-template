@@ -11,6 +11,8 @@ services:
       - '${APP_PORT:-3000}:3000'
     depends_on:
       - postgres
+      - jaeger
+      - loki
 
   postgres:
     image: postgres:16-alpine
@@ -25,5 +27,45 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: nestjs-jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    ports:
+      - '16686:16686'   # Jaeger UI
+      - '4318:4318'     # OTLP HTTP
+
+  loki:
+    image: grafana/loki:latest
+    container_name: nestjs-loki
+    restart: unless-stopped
+    ports:
+      - '3100:3100'
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: nestjs-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-clock-panel
+    ports:
+      - '3001:3000'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - loki
+      - jaeger
+
 volumes:
   postgres_data:
+  loki_data:
+  grafana_data:

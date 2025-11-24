@@ -6,10 +6,16 @@ export interface DatabaseProps {
   name: string;
 }
 
+export interface TelemetryProps {
+  enabled: boolean;
+  endpoint: string;
+}
+
 export interface ConfigProps {
   environment: string;
   appName: string;
   version: string;
   port: number;
   database: DatabaseProps;
+  telemetry: TelemetryProps;
 }
