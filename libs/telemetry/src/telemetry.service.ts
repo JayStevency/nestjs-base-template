@@ -1,4 +1,4 @@
-import { Injectable, Inject, Optional } from '@nestjs/common';
+import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
@@ -12,6 +12,7 @@ import { TelemetryModuleOptions } from './telemetry.interface';
 
 @Injectable()
 export class TelemetryService {
+  private readonly logger = new Logger(TelemetryService.name);
   private sdk: NodeSDK | null = null;
   private initialized = false;
 
@@ -21,34 +22,38 @@ export class TelemetryService {
     private readonly options?: TelemetryModuleOptions,
   ) {
     if (this.options) {
-      this.init(this.options.serviceName, this.options.serviceVersion);
+      this.initFromOptions(this.options);
     }
   }
 
-  init(serviceName: string, version: string): void {
+  private initFromOptions(options: TelemetryModuleOptions): void {
     if (this.initialized) {
       return;
     }
 
-    const isOtelEnabled = process.env.OTEL_ENABLED === 'true';
-    const otelEndpoint =
-      process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces';
+    const {
+      serviceName,
+      serviceVersion,
+      enabled = false,
+      endpoint = 'http://localhost:4318/v1/traces',
+      environment = 'development',
+    } = options;
 
-    if (!isOtelEnabled) {
-      console.log(`OpenTelemetry is disabled for ${serviceName}`);
+    if (!enabled) {
+      this.logger.log(`OpenTelemetry is disabled for ${serviceName}`);
       return;
     }
 
     const traceExporter = new OTLPTraceExporter({
-      url: otelEndpoint,
+      url: endpoint,
     });
 
     this.sdk = new NodeSDK({
       resource: resourceFromAttributes({
         [ATTR_SERVICE_NAME]: serviceName,
-        [ATTR_SERVICE_VERSION]: version,
+        [ATTR_SERVICE_VERSION]: serviceVersion,
         'service.namespace': 'nestjs-microservices',
-        'deployment.environment': process.env.NODE_ENV || 'development',
+        'deployment.environment': environment,
       }),
       traceExporter,
       instrumentations: [
@@ -56,11 +61,9 @@ export class TelemetryService {
           '@opentelemetry/instrumentation-fs': { enabled: false },
           '@opentelemetry/instrumentation-dns': { enabled: false },
           '@opentelemetry/instrumentation-net': { enabled: false },
-          // Enable HTTP instrumentation for tracing API calls
           '@opentelemetry/instrumentation-http': {
             enabled: true,
           },
-          // Enable amqplib instrumentation for RabbitMQ tracing
           '@opentelemetry/instrumentation-amqplib': {
             enabled: true,
           },
@@ -70,12 +73,16 @@ export class TelemetryService {
 
     this.sdk.start();
     this.initialized = true;
-    console.log(`OpenTelemetry initialized for ${serviceName} (${version})`);
+    this.logger.log(
+      `OpenTelemetry initialized for ${serviceName} (${serviceVersion})`,
+    );
 
     process.on('SIGTERM', () => {
       this.shutdown()
-        .then(() => console.log('OpenTelemetry shut down'))
-        .catch((err) => console.error('Error shutting down OpenTelemetry', err))
+        .then(() => this.logger.log('OpenTelemetry shut down'))
+        .catch((err) =>
+          this.logger.error('Error shutting down OpenTelemetry', err),
+        )
         .finally(() => process.exit(0));
     });
   }
@@ -90,14 +97,3 @@ export class TelemetryService {
     return this.initialized;
   }
 }
-
-// Standalone function for backward compatibility
-export const initTelemetry = (serviceName: string, version: string): void => {
-  const service = new TelemetryService();
-  service.init(serviceName, version);
-};
-
-export const shutdownTelemetry = async (): Promise<void> => {
-  const service = new TelemetryService();
-  await service.shutdown();
-};

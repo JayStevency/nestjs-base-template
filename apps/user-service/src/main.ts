@@ -1,17 +1,13 @@
-import { initTelemetry } from '@app/telemetry';
-
-// Initialize OpenTelemetry BEFORE importing any other modules
-// This ensures all RabbitMQ messages are traced
-const SERVICE_NAME = 'user-service';
-const SERVICE_VERSION = process.env.npm_package_version || '0.0.1';
-initTelemetry(SERVICE_NAME, SERVICE_VERSION);
-
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { Logger } from 'nestjs-pino';
 import { UserServiceModule } from './user-service.module';
 import { RabbitmqService } from '@app/rabbitmq';
 import { QUEUES } from '@app/shared';
+import { ConfigProps } from '@app/core';
+
+const SERVICE_NAME = 'user-service';
 
 async function bootstrap() {
   const app = await NestFactory.create(UserServiceModule, {
@@ -22,6 +18,12 @@ async function bootstrap() {
   const logger = app.get(Logger);
   app.useLogger(logger);
 
+  const configService = app.get<ConfigService<ConfigProps>>(ConfigService);
+  const version = configService.get('version');
+  const environment = configService.get('environment');
+  const telemetry = configService.get('telemetry');
+  const loki = configService.get('loki');
+
   const rmqService = app.get<RabbitmqService>(RabbitmqService);
 
   app.connectMicroservice<MicroserviceOptions>(
@@ -30,14 +32,11 @@ async function bootstrap() {
 
   await app.startAllMicroservices();
 
-  const lokiEnabled = process.env.LOKI_ENABLED === 'true';
-  const otelEnabled = process.env.OTEL_ENABLED === 'true';
-
   logger.log(`🚀 ${SERVICE_NAME} is running`);
-  logger.log(`📦 Version: ${SERVICE_VERSION}`);
-  logger.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.log(`📡 OpenTelemetry: ${otelEnabled ? 'enabled' : 'disabled'}`);
-  logger.log(`📊 Loki: ${lokiEnabled ? 'enabled' : 'disabled'}`);
+  logger.log(`📦 Version: ${version}`);
+  logger.log(`🌍 Environment: ${environment}`);
+  logger.log(`📡 OpenTelemetry: ${telemetry?.enabled ? 'enabled' : 'disabled'}`);
+  logger.log(`📊 Loki: ${loki?.enabled ? 'enabled' : 'disabled'}`);
   logger.log(`🐰 RabbitMQ Queue: ${QUEUES.USER_QUEUE}`);
 }
 

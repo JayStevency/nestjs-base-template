@@ -1,15 +1,9 @@
-import { Global, Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { DynamicModule, Global, Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
-import { configurations } from './config';
-
-const getLokiHost = (): string => {
-  return process.env.LOKI_HOST || 'http://localhost:3100';
-};
-
-const isLokiEnabled = (): boolean => {
-  return process.env.LOKI_ENABLED === 'true';
-};
+import configurations from './config/configurations';
+import { ConfigProps } from './config/config.type';
+import { TelemetryModule } from '@app/telemetry';
 
 interface PinoTarget {
   target: string;
@@ -17,11 +11,14 @@ interface PinoTarget {
   level: string;
 }
 
-const getPinoTransport = (serviceName: string) => {
+const getPinoTransport = (
+  serviceName: string,
+  environment: string,
+  loki: { enabled: boolean; host: string },
+) => {
   // In production, use JSON stdout logging (no transport workers for better compatibility)
-  if (process.env.NODE_ENV === 'production') {
-    // Note: For Loki integration in production, use a log collector sidecar (e.g., Promtail)
-    // that reads JSON logs from stdout, which is more reliable than pino-loki transport
+  // Note: For Loki integration in production, use a log collector sidecar (e.g., Promtail)
+  if (environment === 'production') {
     return undefined;
   }
 
@@ -35,16 +32,16 @@ const getPinoTransport = (serviceName: string) => {
   ];
 
   // Add Loki transport in non-production if enabled
-  if (isLokiEnabled()) {
+  if (loki.enabled) {
     targets.push({
       target: 'pino-loki',
       options: {
         batching: true,
         interval: 5,
-        host: getLokiHost(),
+        host: loki.host,
         labels: {
           app: serviceName,
-          env: process.env.NODE_ENV || 'local',
+          env: environment,
         },
         silenceErrors: false,
       },
@@ -56,19 +53,11 @@ const getPinoTransport = (serviceName: string) => {
 };
 
 @Global()
-@Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [configurations],
-      envFilePath: ['.env.local', '.env.dev', '.env.prod', '.env'],
-    }),
-  ],
-  exports: [ConfigModule],
-})
+@Module({})
 export class CoreModule {
-  static forRoot(serviceName: string) {
-    const logLevel = process.env.LOG_LEVEL || 'info';
+  static forRoot(serviceName: string): DynamicModule {
+    // Load config synchronously for initial setup
+    const config = configurations();
 
     return {
       module: CoreModule,
@@ -80,12 +69,26 @@ export class CoreModule {
         }),
         LoggerModule.forRoot({
           pinoHttp: {
-            level: logLevel,
-            transport: getPinoTransport(serviceName),
+            level: config.logLevel,
+            transport: getPinoTransport(serviceName, config.environment, config.loki),
+          },
+        }),
+        TelemetryModule.forRootAsync({
+          imports: [ConfigModule],
+          inject: [ConfigService],
+          useFactory: (configService: ConfigService<ConfigProps>) => {
+            const telemetry = configService.get('telemetry');
+            return {
+              serviceName,
+              serviceVersion: configService.get('version') || '0.0.0',
+              enabled: telemetry?.enabled || false,
+              endpoint: telemetry?.endpoint,
+              environment: configService.get('environment'),
+            };
           },
         }),
       ],
-      exports: [ConfigModule],
+      exports: [ConfigModule, TelemetryModule],
     };
   }
 }
