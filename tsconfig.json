@@ -16,6 +16,10 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "noFallthroughCasesInSwitch": false,
+    "paths": {
+      "@app/colyseus-rooms": ["libs/colyseus-rooms/src"],
+      "@app/colyseus-rooms/*": ["libs/colyseus-rooms/src/*"]
+    }
   }
 }

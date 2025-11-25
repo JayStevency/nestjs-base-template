@@ -1,5 +1,30 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
-  "sourceRoot": "src"
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": false,
+    "tsConfigPath": "tsconfig.json"
+  },
+  "projects": {
+    "game-server": {
+      "type": "application",
+      "root": "apps/game-server",
+      "entryFile": "main",
+      "sourceRoot": "apps/game-server/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/game-server/tsconfig.app.json"
+      }
+    },
+    "colyseus-rooms": {
+      "type": "library",
+      "root": "libs/colyseus-rooms",
+      "entryFile": "index",
+      "sourceRoot": "libs/colyseus-rooms/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/colyseus-rooms/tsconfig.lib.json"
+      }
+    }
+  }
 }
