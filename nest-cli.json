@@ -71,6 +71,15 @@
       "compilerOptions": {
         "tsConfigPath": "libs/core/tsconfig.lib.json"
       }
+    },
+    "bullmq": {
+      "type": "library",
+      "root": "libs/bullmq",
+      "entryFile": "index",
+      "sourceRoot": "libs/bullmq/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/bullmq/tsconfig.lib.json"
+      }
     }
   }
 }
