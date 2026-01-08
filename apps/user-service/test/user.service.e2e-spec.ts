@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigModule } from '@nestjs/config';
 import { UserService } from '../src/user.service';
-import { PrismaService } from '@app/prisma';
+import { UserRepository } from '../src/repositories';
+import { PrismaModule, PrismaService } from '@app/prisma';
 import configurations from '@app/core/config/configurations';
 
 describe('UserService (e2e)', () => {
@@ -17,8 +18,9 @@ describe('UserService (e2e)', () => {
           isGlobal: true,
           load: [configurations],
         }),
+        PrismaModule,
       ],
-      providers: [UserService, PrismaService],
+      providers: [UserService, UserRepository],
     }).compile();
 
     service = module.get<UserService>(UserService);

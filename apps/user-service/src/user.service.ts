@@ -1,67 +1,40 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@app/prisma';
-import { CreateUserDto, UpdateUserDto, IUser } from '@app/shared';
-import * as bcrypt from 'crypto';
+import { CreateUserDto, UpdateUserDto } from '@app/shared';
+import { IUser } from './entities';
+import { UserRepository } from './repositories';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   private hashPassword(password: string): string {
-    return bcrypt.createHash('sha256').update(password).digest('hex');
+    return crypto.createHash('sha256').update(password).digest('hex');
   }
 
   async create(data: CreateUserDto): Promise<IUser> {
     const hashedPassword = this.hashPassword(data.password);
-    const user = await this.prisma.user.create({
-      data: {
-        ...data,
-        password: hashedPassword,
-      },
+    const user = await this.userRepository.create({
+      ...data,
+      password: hashedPassword,
     });
     const { password, ...result } = user;
     return result as IUser;
   }
 
   async findAll(): Promise<IUser[]> {
-    const users = await this.prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    return users;
+    return this.userRepository.findAllWithoutPassword();
   }
 
   async findById(id: number): Promise<IUser | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    return user;
+    return this.userRepository.findByIdWithoutPassword(id);
   }
 
   async findByEmail(email: string): Promise<IUser | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    return user;
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) return null;
+    const { password, ...result } = user;
+    return result as IUser;
   }
 
   async update(id: number, data: UpdateUserDto): Promise<IUser> {
@@ -69,31 +42,14 @@ export class UserService {
     if (data.password) {
       updateData.password = this.hashPassword(data.password);
     }
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    return user;
+    const user = await this.userRepository.updateById(id, updateData);
+    const { password, ...result } = user;
+    return result as IUser;
   }
 
   async delete(id: number): Promise<IUser> {
-    const user = await this.prisma.user.delete({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-    return user;
+    const user = await this.userRepository.deleteById(id);
+    const { password, ...result } = user;
+    return result as IUser;
   }
 }

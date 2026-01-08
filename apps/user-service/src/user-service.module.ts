@@ -4,6 +4,7 @@ import { PrismaModule } from '@app/prisma';
 import { RabbitmqModule } from '@app/rabbitmq';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
+import { UserRepository } from './repositories';
 
 @Module({
   imports: [
@@ -12,6 +13,6 @@ import { UserService } from './user.service';
     RabbitmqModule,
   ],
   controllers: [UserController],
-  providers: [UserService],
+  providers: [UserService, UserRepository],
 })
 export class UserServiceModule {}
